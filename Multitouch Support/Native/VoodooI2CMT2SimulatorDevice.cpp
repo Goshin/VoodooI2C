@@ -196,7 +196,8 @@ void VoodooI2CMT2SimulatorDevice::constructReportGated(VoodooI2CMultitouchEvent&
         
         
         if (transducer->tip_pressure.value() || (input_report.Button)) {
-            finger_data.Pressure = 120;
+            input_report.Button = false;
+            finger_data.Pressure = 0xff;
         }
         
 
