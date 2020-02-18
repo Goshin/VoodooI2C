@@ -195,9 +195,35 @@ void VoodooI2CMT2SimulatorDevice::constructReportGated(VoodooI2CMultitouchEvent&
         }
         
         
+        static bool hold_drag = false;
         if (transducer->tip_pressure.value() || (input_report.Button)) {
             input_report.Button = false;
             finger_data.Pressure = 0xff;
+        } else if (!input_report.Button && multitouch_event.contact_count == 1) {
+            static IOFixed first_scaled_x = 0, first_scaled_y = 0;
+            static uint64_t press_start_ns;
+            uint64_t now_abs;
+            clock_get_uptime(&now_abs);
+            uint64_t now_ns;
+            absolutetime_to_nanoseconds(now_abs, &now_ns);
+            if (new_touch_state[i] == 1) {
+                if (transducer->tip_switch.value()) {
+                    first_scaled_x = scaled_x;
+                    first_scaled_y = scaled_y;
+                    press_start_ns = now_ns;
+                    hold_drag = true;
+                } else {
+                    hold_drag = false;
+                }
+            } else if (press_start_ns && hold_drag && now_ns - press_start_ns < 500e6) {
+                if (abs(scaled_x - first_scaled_x) > MT2_MAX_X / 50 || abs(scaled_y - first_scaled_y) > MT2_MAX_Y / 50) {
+                    hold_drag = false;
+                }
+            } else if (hold_drag) {
+                finger_data.Pressure = 100;
+            }
+        } else {
+            hold_drag = false;
         }
         
 
